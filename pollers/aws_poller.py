@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
@@ -16,7 +16,7 @@ import sys
 import utils
 
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 
 ALL_REGIONS = ("us-east-1", "us-west-1", "us-west-2", "eu-west-1", "eu-central-1",
@@ -142,7 +142,8 @@ class AWSRegionPollerFactory(object):
     VOLUME_DATA_DIR = "volumes"
 
     def __init__(self, access_key_id, secret_access_key, regions=None,
-                 include_rogue_volumes=False, force_grab=False):
+                 include_rogue_volumes=False, force_grab=False, root_results_dir=None
+                ):
         """ Configures our AWS region poller factory to pull information from APIs.
 
         :param access_key_id: AWS Access Key ID (sometimes public)
@@ -159,6 +160,9 @@ class AWSRegionPollerFactory(object):
 
         :param force_grab: Forcefully poll the AWS account's API for the freshest data
         :type force_grab: bool
+
+        :param root_results_dir: Root directory where results will be saved to
+        :type root_results_dir: str
         """
         self.access_key_id = access_key_id
         self.__secret_access_key = secret_access_key
@@ -172,7 +176,10 @@ class AWSRegionPollerFactory(object):
         self.force_grab = force_grab
 
         logger.info("Setting up the file-tree to store API data")
-        utils.setup_env(self.access_key_id)
+
+        self.root_results_dir = root_results_dir or utils.DEFAULT_ROOT_RESULTS_DIR
+
+        utils.setup_env(self.access_key_id, results_dir=self.root_results_dir)
 
     def get_region_poller(self, region):
         """ Build an AWSRegionPoller based on the region provided.
@@ -187,7 +194,7 @@ class AWSRegionPollerFactory(object):
         conn = boto.ec2.connect_to_region(region, aws_access_key_id=self.access_key_id,
                                           aws_secret_access_key=self.__secret_access_key)
 
-        return AWSRegionPoller(self.access_key_id, conn, region, self.force_grab)
+        return AWSRegionPoller(self.access_key_id, conn, region, self.root_results_dir, self.force_grab)
 
     def run(self):
         """ Run the AWS region poller with the initialized configuration from the constructor.
@@ -214,7 +221,7 @@ class AWSRegionPollerFactory(object):
 class AWSRegionPoller(object):
     """ AWS Account API poller that pulls information from one specified region """
 
-    def __init__(self, ident, connection, region_name, force_grab=False):
+    def __init__(self, ident, connection, region_name, root_results_dir, force_grab=False):
         """ Configures our AWS region poller to pull information from this API.
 
         :param ident: Identifier for this poller used to store data. This is most likely the Access Key ID.
@@ -226,6 +233,9 @@ class AWSRegionPoller(object):
         :param region_name: Name of the region to access the API
         :type region_name: str
 
+        :param root_results_dir: Root directory where results will be saved to
+        :type root_results_dir: str
+
         :param force_grab: Forcefully poll the regional AWS account's API for the freshest data
         :type force_grab: bool
         """
@@ -233,7 +243,7 @@ class AWSRegionPoller(object):
         self.region_name = region_name
         self.force_grab = force_grab
 
-        env_path = os.path.join(utils.BASE_RESULTS_DIR, ident, region_name)
+        env_path = os.path.join(root_results_dir, ident, region_name)
 
         utils.setup_dir(env_path, AWSRegionPollerFactory.INSTANCE_DATA_DIR,
                         AWSRegionPollerFactory.VOLUME_DATA_DIR
@@ -281,7 +291,7 @@ class AWSRegionPoller(object):
         return all_instances
 
 
-def main(args=None):
+def main():
     parser = argparse.ArgumentParser(description="Map Amazon EBS Volumes to EC2 Instances and output"
                                                  " into a table, v{}\nNOTE: {} and {} must be"
                                                  " defined".format(__version__, AWS_ACCESS_KEY_ID_ENV_VAR,
@@ -297,6 +307,8 @@ def main(args=None):
     parser.add_argument("-f", "--force", action="store_true", required=False,
                         help="Forcefully poll the API for the freshest data"
                        )
+
+    parser.add_argument("-t", "--target-dir", required=False, help="Write results to this target directory")
 
     parser.add_argument("--include-rogue-volumes", action="store_true",
                         help="Include volumes that are disattached from instances"
@@ -339,7 +351,8 @@ def main(args=None):
                                             secret_access_key,
                                             regions=regions,
                                             include_rogue_volumes=bool(args.include_rogue_volumes),
-                                            force_grab=args.force
+                                            force_grab=args.force,
+                                            root_results_dir=args.target_dir
                                            )
 
     ebs_volumes, ec2_instances = poller_factory.run()

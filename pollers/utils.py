@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
@@ -24,7 +24,7 @@ results
   .   .   .   .
 """
 
-BASE_RESULTS_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "results")
+DEFAULT_ROOT_RESULTS_DIR = "results"
 
 def setup_dir(path, *sub_dirs):
     """ Creates dir at path if it does not exist.
@@ -42,13 +42,19 @@ def setup_dir(path, *sub_dirs):
         setup_dir(os.path.join(path, sub_dir))
 
 
-def setup_env(ident):
+def setup_env(ident, results_dir=None):
     """ Sets up the file-tree of this file-system to record data from the API
 
     :param ident: Identifier for the AWS Account we're working with, most likely the Access Key ID
     :type ident: str
+
+    :param results_dir: Root directory where results are found
+    :type results_dir: str
     """
-    setup_dir(BASE_RESULTS_DIR, ident)
+    if results_dir is None:
+        results_dir = DEFAULT_ROOT_RESULTS_DIR
+
+    setup_dir(results_dir, ident)
 
 
 def get_last_file_timestamp(path):
@@ -74,10 +80,19 @@ def get_last_file_timestamp(path):
     return last_timestamp
 
 
-def cleanup_old_data():
-    """ Clean up old data files that have been saved over time. """
-    for ident_dir in os.listdir(BASE_RESULTS_DIR):
-        ident_dir_path = os.path.join(BASE_RESULTS_DIR, ident_dir)
+def cleanup_old_data(results_dir=None):
+    """ Clean up old data files that have been saved over time.
+
+    :param results_dir: Root directory where results are found
+    :type results_dir: str
+    """
+    if results_dir is None:
+        results_dir = DEFAULT_ROOT_RESULTS_DIR
+
+    print("Walking through '{}' cleaning up old data-files...".format(results_dir))
+
+    for ident_dir in os.listdir(results_dir):
+        ident_dir_path = os.path.join(results_dir, ident_dir)
 
         for region_dir in os.listdir(ident_dir_path):
             region_dir_path = os.path.join(ident_dir_path, region_dir)
@@ -107,19 +122,27 @@ def cleanup_old_data():
                         to_delete_files.add(filename)
 
                 for filename in to_delete_files:
-                    os.remove(os.path.join(data_dir_path, filename))
+                    file_path = os.path.join(data_dir_path, filename)
+                    os.remove(file_path)
+
+                    print("  Deleting {}".format(file_path))
 
 
 def main():
     parser = argparse.ArgumentParser(description="File-tree util to manage our poller file system")
+
     parser.add_argument("-c", "--cleanup", action="store_true", required=False,
                         help="Clean up stale data files"
+                       )
+
+    parser.add_argument("-r", "--results-dir", required=False,
+                        help="Use this results dir, otherwise default ({}/) is used".format(DEFAULT_ROOT_RESULTS_DIR)
                        )
 
     args = parser.parse_args()
 
     if args.cleanup:
-        cleanup_old_data()
+        cleanup_old_data(args.results_dir)
 
 
 if __name__ == "__main__":
