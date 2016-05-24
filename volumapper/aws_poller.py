@@ -324,14 +324,14 @@ def main():
         :param var_name: Environment variable on the system
         :type var_name: str
 
-        :returns: Environmental variable's value
+        :returns: Environment variable's value
         :rtype: str
 
         :raises OSError: If the environmment variable is not defined
         """
         val = os.getenv(var_name)
         if not val:
-            raise OSError("Environmental var {} must be defined".format(var_name))
+            raise OSError("Environment var {} must be defined".format(var_name))
 
         return val
 
