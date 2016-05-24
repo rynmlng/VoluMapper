@@ -91,6 +91,10 @@ def cleanup_old_data(results_dir=None):
 
     print("Walking through '{}' cleaning up old data-files...".format(results_dir))
 
+    if not os.path.exists(results_dir):
+        print("Results dir not found!")
+        return
+
     for ident_dir in os.listdir(results_dir):
         ident_dir_path = os.path.join(results_dir, ident_dir)
 
