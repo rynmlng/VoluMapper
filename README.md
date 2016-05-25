@@ -8,9 +8,14 @@ The first thing you will need to do is obtain the source code for this project o
 
 1. `cd` into the installation directory of your choosing
 2. `git clone https://github.com/rynmlng/VoluMapper.git`
-3. `cd volumapper`
 
-At this point you will see 2 executable Python scripts with the following functions:
+Next step is to ensure you have the proper Python packages:
+```
+pip install -r requirements.txt
+```
+If you are not using a virtualenv, you'll need to prefix this with a `sudo` command to install system-wide.
+
+Now `cd volumapper`. At this point you will see 2 executable Python scripts with the following functions:
 * `aws_poller.py` - Maps EBS Volumes to EC2 Instances and outputs them to a table
 * `utils.py` - Manages the file-tree produced from the `aws_poller.py`
 
